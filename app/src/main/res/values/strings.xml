@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">lab6_task2</string>
+    <string name="clients">Clients</string>
+    <string name="loyalty_programs">Loyalty Programs</string>
+    <string name="add_client">Add Client</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
 </resources>

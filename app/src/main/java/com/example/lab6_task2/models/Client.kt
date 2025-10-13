@@ -12,7 +12,7 @@ class Client {
     var address: String
     var email: String
     var dateRegistration: String
-    var loyaltyProgram: Long
+    var loyaltyProgram: LoyaltyProgram
 
     constructor(
         lastName: String,
@@ -22,7 +22,7 @@ class Client {
         address: String,
         email: String,
         dateRegistration: String,
-        loyaltyProgram: Long
+        loyaltyProgram: LoyaltyProgram
     ) {
         this.lastName = lastName
         this.firstName = firstName

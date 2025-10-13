@@ -11,6 +11,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import com.example.lab6_task2.ClientProvider
 import com.example.lab6_task2.R
+import com.example.lab6_task2.models.Client
+import com.example.lab6_task2.models.LoyaltyProgram
 import com.google.android.material.appbar.MaterialToolbar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -55,8 +57,23 @@ class MainActivity : AppCompatActivity() {
         // Загружаем данные в фоновом потоке
         CoroutineScope(Dispatchers.Main).launch {
             try {
-                val clientsDeferred = async(Dispatchers.IO) { clientProvider.getAllClients() }
-                val programsDeferred = async(Dispatchers.IO) { clientProvider.getAllLoyaltyPrograms() }
+                val clientsDeferred = async(Dispatchers.IO) {
+                    try {
+                        clientProvider.getAllClients()
+                    } catch (e: Exception){
+                        println("Error loading clients: ${e.message}")
+                        emptyList<Client>()
+                    }
+
+                }
+                val programsDeferred = async(Dispatchers.IO) {
+                    try {
+                        clientProvider.getAllLoyaltyPrograms()
+                    } catch (e: Exception){
+                        println("Error loading programs: ${e.message}")
+                        emptyList<LoyaltyProgram>()
+                    }
+                }
 
                 val clients = clientsDeferred.await()
                 val programs = programsDeferred.await()
@@ -67,8 +84,6 @@ class MainActivity : AppCompatActivity() {
                 updateUI()
             } catch (e: Exception) {
                 Toast.makeText(this@MainActivity, "Error loading data: ${e.message}", Toast.LENGTH_LONG).show()
-            } finally {
-                showLoading(false)
             }
         }
     }

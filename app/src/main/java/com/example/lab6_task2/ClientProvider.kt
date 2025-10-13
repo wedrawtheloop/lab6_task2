@@ -28,14 +28,14 @@ class ClientProvider {
         }
 
     }
-    private val baseUrl = "http://10.0.2.2:8080/"
+    private val baseUrl = "http://10.0.2.2:8080"
 
     suspend fun getAllClients(): List<Client>{
-        return client.get {"$baseUrl/clients"}.body()
+        return client.get("$baseUrl/clients").body()
     }
 
     suspend fun getClientById(id: Long): Client {
-        return client.get {"$baseUrl/clients/$id"}.body()
+        return client.get("$baseUrl/clients/$id").body()
     }
 
     suspend fun createClient(client: Client): Client {

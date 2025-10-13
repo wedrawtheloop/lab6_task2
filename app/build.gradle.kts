@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.lab6_task2"
-    compileSdkVersion("android-36.1")
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.lab6_task2"

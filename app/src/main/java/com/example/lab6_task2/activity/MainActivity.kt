@@ -18,6 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
     private lateinit var clientProvider: ClientProvider
@@ -30,9 +31,13 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         clientProvider = ClientProvider()
-
         setupToolbar()
         setupClickListeners()
+        loadData()
+    }
+
+    override fun onResume() {
+        super.onResume()
         loadData()
     }
     private fun setupToolbar() {

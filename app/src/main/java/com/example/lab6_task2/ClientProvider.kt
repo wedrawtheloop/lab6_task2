@@ -14,6 +14,7 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 
@@ -82,4 +83,6 @@ class ClientProvider {
     suspend fun deleteLoyaltyProgram(id: Long) {
         client.delete("$baseUrl/lp/$id")
     }
+
+
 }

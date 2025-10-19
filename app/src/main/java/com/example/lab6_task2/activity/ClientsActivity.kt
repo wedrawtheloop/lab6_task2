@@ -1,5 +1,6 @@
 package com.example.lab6_task2.activity
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -11,7 +12,6 @@ import android.widget.ImageButton
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.DividerItemDecoration
@@ -30,6 +30,7 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.activity.OnBackPressedCallback
 
 class ClientsActivity : AppCompatActivity() {
 
@@ -124,9 +125,8 @@ class ClientsActivity : AppCompatActivity() {
     private fun showAddClientDialog() {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_client, null)
 
-        // Setup spinner for loyalty programs
         val spinnerPrograms = dialogView.findViewById<Spinner>(R.id.spinnerLoyaltyProgram)
-        val programNames = loyaltyPrograms.map { "Level ${it.loyaltyLevel} - ${it.discountAmount}%" }.toMutableList()
+        val programNames = loyaltyPrograms.map { "Level ${it.loyalty_level} - ${it.discount_amount}%" }.toMutableList()
         programNames.add(0, "Select Program")
 
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, programNames)
@@ -150,7 +150,16 @@ class ClientsActivity : AppCompatActivity() {
                     selectedProgramPosition > 0) {
 
                     val selectedProgram = loyaltyPrograms[selectedProgramPosition - 1]
-                    val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+                    val loyaltyProgram = LoyaltyProgram(
+                        idLoyaltyProgram = selectedProgram.id_loyalty_program,
+                        loyaltyLevel = selectedProgram.loyalty_level,
+                        discountAmount = selectedProgram.discount_amount,
+                        validityPeriod = selectedProgram.validity_period,
+                        description = selectedProgram.description
+                    )
+
+                    val currentDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault()).format(Date())
 
                     val client = Client(
                         lastName = lastName,
@@ -160,8 +169,9 @@ class ClientsActivity : AppCompatActivity() {
                         address = address,
                         email = email,
                         dateRegistration = currentDate,
-                        loyaltyProgram = selectedProgram.id!!
+                        loyaltyProgram = loyaltyProgram
                     )
+
                     createClient(client)
                 } else {
                     Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
@@ -184,6 +194,7 @@ class ClientsActivity : AppCompatActivity() {
                 loadClients() // Refresh the list
                 Toast.makeText(this@ClientsActivity, "Client created successfully", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
+                println("🔴 Error in createClient: ${e.message}")
                 Toast.makeText(this@ClientsActivity, "Error creating client: ${e.message}", Toast.LENGTH_LONG).show()
             } finally {
                 showLoading(false)
@@ -210,18 +221,18 @@ class ClientsActivity : AppCompatActivity() {
     }
 
     private fun showClientDetails(client: Client) {
-        val programName = loyaltyPrograms.find { it.id == client.loyaltyProgram }?.let {
-            "Level ${it.loyaltyLevel} - ${it.discountAmount}%"
+        val programName = loyaltyPrograms.find { it.id_loyalty_program == client.loyaltyProgram.id_loyalty_program }?.let {
+            "Level ${it.loyalty_level} - ${it.discount_amount}%"
         } ?: "Unknown Program"
 
         val dialog = AlertDialog.Builder(this)
             .setTitle("Client Details")
             .setMessage(
-                "Name: ${client.lastName} ${client.firstName} ${client.patronymic}\n" +
+                "Name: ${client.last_name} ${client.first_name} ${client.patronymic}\n" +
                         "Email: ${client.email}\n" +
-                        "Phone: ${client.phoneNumber}\n" +
-                        "Address: ${client.address}\n" +
-                        "Registration Date: ${client.dateRegistration}\n" +
+                        "Phone: ${client.phone_number}\n" +
+                        "Address: ${client.adress}\n" +
+                        "Registration Date: ${client.date_registration}\n" +
                         "Loyalty Program: $programName"
             )
             .setPositiveButton("OK", null)
@@ -234,8 +245,25 @@ class ClientsActivity : AppCompatActivity() {
         loadingOverlay.visibility = if (show) View.VISIBLE else View.GONE
     }
 
+    private fun setupBackPressHandler() {
+        // Обработка кнопки "Назад" через OnBackPressedDispatcher
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                // Ваша логика при нажатии "Назад"
+                navigateBackToMain()
+            }
+        })
+    }
+
+    private fun navigateBackToMain() {
+        val intent = Intent(this, MainActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        startActivity(intent)
+        finish()
+    }
+
     override fun onSupportNavigateUp(): Boolean {
-        onBackPressed()
+        navigateBackToMain()
         return true
     }
 
@@ -264,26 +292,26 @@ class ClientsActivity : AppCompatActivity() {
             val client = clients[position]
 
             // ФИО
-            holder.tvName.text = "${client.lastName} ${client.firstName} ${client.patronymic}"
+            holder.tvName.text = "${client.last_name} ${client.first_name} ${client.patronymic}"
 
             // Телефон
-            holder.tvPhone.text = client.phoneNumber
+            holder.tvPhone.text = client.phone_number
 
             // Email
             holder.tvEmail.text = client.email
 
             // Адрес
-            holder.tvAddress.text = client.address
+            holder.tvAddress.text = client.adress
 
             // Программа лояльности
-            val program = loyaltyPrograms.find { it.id == client.loyaltyProgram }
+            val program = loyaltyPrograms.find { it.id_loyalty_program == client.loyaltyProgram.id_loyalty_program }
             val programText = program?.let {
-                "Level ${it.loyaltyLevel} - ${it.discountAmount}%"
+                "Level ${it.loyalty_level} - ${it.discount_amount}%"
             } ?: "Unknown Program"
             holder.tvProgram.text = programText
 
             // Дата регистрации
-            holder.tvRegistrationDate.text = client.dateRegistration
+            holder.tvRegistrationDate.text = client.date_registration
 
             holder.itemView.setOnClickListener {
                 onItemClick(client)
@@ -292,9 +320,9 @@ class ClientsActivity : AppCompatActivity() {
             holder.btnDelete.setOnClickListener {
                 AlertDialog.Builder(this@ClientsActivity)
                     .setTitle("Delete Client")
-                    .setMessage("Are you sure you want to delete ${client.lastName} ${client.firstName}?")
+                    .setMessage("Are you sure you want to delete ${client.last_name} ${client.first_name}?")
                     .setPositiveButton("Delete") { _, _ ->
-                        deleteClient(client.id!!)
+                        deleteClient(client.id_client!!)
                     }
                     .setNegativeButton("Cancel", null)
                     .show()

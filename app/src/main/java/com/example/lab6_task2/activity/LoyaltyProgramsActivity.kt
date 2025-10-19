@@ -84,12 +84,12 @@ class LoyaltyProgramsActivity : AppCompatActivity() {
 
     private fun showProgramDetails(program: LoyaltyProgram) {
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Loyalty Program - Level ${program.loyaltyLevel}")
+            .setTitle("Loyalty Program - Level ${program.loyalty_level}")
             .setMessage(
                 "Description: ${program.description}\n" +
-                        "Discount Amount: ${program.discountAmount}%\n" +
-                        "Validity Period: ${program.validityPeriod} days\n" +
-                        "Level: ${program.loyaltyLevel}"
+                        "Discount Amount: ${program.discount_amount}%\n" +
+                        "Validity Period: ${program.validity_period} days\n" +
+                        "Level: ${program.loyalty_level}"
             )
             .setPositiveButton("OK", null)
             .create()
@@ -126,9 +126,9 @@ class LoyaltyProgramsActivity : AppCompatActivity() {
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val program = programs[position]
 
-            holder.tvLevel.text = "Level ${program.loyaltyLevel}"
-            holder.tvDiscount.text = "${program.discountAmount}%"
-            holder.tvValidity.text = "${program.validityPeriod} days"
+            holder.tvLevel.text = "Level ${program.loyalty_level}"
+            holder.tvDiscount.text = "${program.discount_amount}%"
+            holder.tvValidity.text = "${program.validity_period} days"
             holder.tvDescription.text = program.description
 
             holder.itemView.setOnClickListener {

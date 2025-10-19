@@ -4,14 +4,14 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 class Client {
-    var id: Long? = null
-    var lastName: String
-    var firstName: String
+    var id_client: Long? = null
+    var last_name: String
+    var first_name: String
     var patronymic: String
-    var phoneNumber: String
-    var address: String
+    var phone_number: String
+    var adress: String
     var email: String
-    var dateRegistration: String
+    var date_registration: String
     var loyaltyProgram: LoyaltyProgram
 
     constructor(
@@ -24,13 +24,13 @@ class Client {
         dateRegistration: String,
         loyaltyProgram: LoyaltyProgram
     ) {
-        this.lastName = lastName
-        this.firstName = firstName
+        this.last_name = lastName
+        this.first_name = firstName
         this.patronymic = patronymic
-        this.phoneNumber = phoneNumber
-        this.address = address
+        this.phone_number = phoneNumber
+        this.adress = address
         this.email = email
-        this.dateRegistration = dateRegistration
+        this.date_registration = dateRegistration
         this.loyaltyProgram = loyaltyProgram
     }
 }

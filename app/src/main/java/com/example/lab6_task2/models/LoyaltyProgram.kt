@@ -12,16 +12,16 @@ class LoyaltyProgram {
     val description: String
 
     constructor(
-        idLoyaltyProgram: Long?,
-        loyaltyLevel: Int,
-        discountAmount: Int,
-        validityPeriod: Int,
+        id_loyalty_program: Long?,
+        loyalty_level: Int,
+        discount_amount: Int,
+        validity_period: Int,
         description: String
     ) {
-        this.id_loyalty_program = idLoyaltyProgram
-        this.loyalty_level = loyaltyLevel
-        this.discount_amount = discountAmount
-        this.validity_period = validityPeriod
+        this.id_loyalty_program = id_loyalty_program
+        this.loyalty_level = loyalty_level
+        this.discount_amount = discount_amount
+        this.validity_period = validity_period
         this.description = description
     }
 }

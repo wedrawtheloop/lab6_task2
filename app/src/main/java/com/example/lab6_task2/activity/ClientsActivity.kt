@@ -71,9 +71,14 @@ class ClientsActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() {
-        adapter = ClientsAdapter { client ->
-            showClientDetails(client)
-        }
+        adapter = ClientsAdapter(
+            onItemClick = { client ->
+                showClientDetails(client)
+            },
+            onEditClick = { client ->
+                showEditClientDialog(client)
+            }
+        )
 
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
@@ -152,27 +157,129 @@ class ClientsActivity : AppCompatActivity() {
                     val selectedProgram = loyaltyPrograms[selectedProgramPosition - 1]
 
                     val loyaltyProgram = LoyaltyProgram(
-                        idLoyaltyProgram = selectedProgram.id_loyalty_program,
-                        loyaltyLevel = selectedProgram.loyalty_level,
-                        discountAmount = selectedProgram.discount_amount,
-                        validityPeriod = selectedProgram.validity_period,
+                        id_loyalty_program = selectedProgram.id_loyalty_program,
+                        loyalty_level = selectedProgram.loyalty_level,
+                        discount_amount = selectedProgram.discount_amount,
+                        validity_period = selectedProgram.validity_period,
                         description = selectedProgram.description
                     )
 
                     val currentDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault()).format(Date())
 
                     val client = Client(
-                        lastName = lastName,
-                        firstName = firstName,
+                        last_name = lastName,
+                        first_name = firstName,
                         patronymic = patronymic,
-                        phoneNumber = phoneNumber,
+                        phone_number = phoneNumber,
                         address = address,
                         email = email,
-                        dateRegistration = currentDate,
-                        loyaltyProgram = loyaltyProgram
+                        date_registration = currentDate,
+                        loyalty_program = loyaltyProgram
                     )
 
                     createClient(client)
+                } else {
+                    Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .create()
+
+        dialog.show()
+    }
+
+    private fun showEditClientDialog(client: Client) {
+        if (client.id_client == null) {
+            Toast.makeText(this, "Error: Client ID is null", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_client, null)
+
+        val etLastName = dialogView.findViewById<EditText>(R.id.etLastName)
+        val etFirstName = dialogView.findViewById<EditText>(R.id.etFirstName)
+        val etPatronymic = dialogView.findViewById<EditText>(R.id.etPatronymic)
+        val etPhoneNumber = dialogView.findViewById<EditText>(R.id.etPhoneNumber)
+        val etAddress = dialogView.findViewById<EditText>(R.id.etAddress)
+        val etEmail = dialogView.findViewById<EditText>(R.id.etEmail)
+        val spinnerPrograms = dialogView.findViewById<Spinner>(R.id.spinnerLoyaltyProgram)
+
+        // Заполняем поля текущими значениями
+        etLastName.setText(client.last_name)
+        etFirstName.setText(client.first_name)
+        etPatronymic.setText(client.patronymic)
+        etPhoneNumber.setText(client.phone_number)
+        etAddress.setText(client.adress)
+        etEmail.setText(client.email)
+
+        // Настраиваем спиннер программ лояльности
+        val programNames = loyaltyPrograms.map { "Level ${it.loyalty_level} - ${it.discount_amount}%" }.toMutableList()
+        programNames.add(0, "Select Program")
+
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, programNames)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerPrograms.adapter = adapter
+
+        // Выбираем текущую программу лояльности
+        val currentProgramIndex = loyaltyPrograms.indexOfFirst {
+            it.id_loyalty_program == client.loyaltyProgram.id_loyalty_program
+        }
+        if (currentProgramIndex >= 0) {
+            spinnerPrograms.setSelection(currentProgramIndex + 1) // +1 потому что первый элемент "Select Program"
+        }
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Edit Client")
+            .setView(dialogView)
+            .setPositiveButton("Save") { dialog, _ ->
+                val lastName = etLastName.text.toString()
+                val firstName = etFirstName.text.toString()
+                val patronymic = etPatronymic.text.toString()
+                val phoneNumber = etPhoneNumber.text.toString()
+                val address = etAddress.text.toString()
+                val email = etEmail.text.toString()
+                val selectedProgramPosition = spinnerPrograms.selectedItemPosition
+
+                if (lastName.isNotEmpty() && firstName.isNotEmpty() && patronymic.isNotEmpty() &&
+                    phoneNumber.isNotEmpty() && address.isNotEmpty() && email.isNotEmpty() &&
+                    selectedProgramPosition > 0) {
+
+                    val selectedProgram = loyaltyPrograms[selectedProgramPosition - 1]
+
+                    // Создаем Map с измененными полями
+                    val updates = mutableMapOf<String, Any>()
+
+                    // Добавляем только те поля, которые изменились
+                    if (lastName != client.last_name) {
+                        updates["last_name"] = lastName
+                    }
+                    if (firstName != client.first_name) {
+                        updates["first_name"] = firstName
+                    }
+                    if (patronymic != client.patronymic) {
+                        updates["patronymic"] = patronymic
+                    }
+                    if (phoneNumber != client.phone_number) {
+                        updates["phone_number"] = phoneNumber
+                    }
+                    if (address != client.adress) {
+                        updates["adress"] = address
+                    }
+                    if (email != client.email) {
+                        updates["email"] = email
+                    }
+                    if (selectedProgram.id_loyalty_program != client.loyaltyProgram.id_loyalty_program) {
+                        updates["loyalty_program"] = mapOf(
+                            "id_loyalty_program" to selectedProgram.id_loyalty_program
+                        )
+                    }
+
+                    // Если есть изменения - отправляем PATCH
+                    if (updates.isNotEmpty()) {
+                        patchClient(client.id_client!!, updates)
+                    } else {
+                        Toast.makeText(this, "No changes detected", Toast.LENGTH_SHORT).show()
+                    }
                 } else {
                     Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
                 }
@@ -196,6 +303,29 @@ class ClientsActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 println("🔴 Error in createClient: ${e.message}")
                 Toast.makeText(this@ClientsActivity, "Error creating client: ${e.message}", Toast.LENGTH_LONG).show()
+            } finally {
+                showLoading(false)
+            }
+        }
+    }
+
+    private fun patchClient(clientId: Long, updates: Map<String, Any>) {
+        showLoading(true)
+
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val success = withContext(Dispatchers.IO) {
+                    clientProvider.patchClient(clientId, updates)
+                }
+                if (success) {
+                    loadClients() // Refresh the list
+                    Toast.makeText(this@ClientsActivity, "Client updated successfully", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this@ClientsActivity, "Failed to update client", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                println("🔴 Error in patchClient: ${e.message}")
+                Toast.makeText(this@ClientsActivity, "Error updating client: ${e.message}", Toast.LENGTH_LONG).show()
             } finally {
                 showLoading(false)
             }
@@ -246,10 +376,8 @@ class ClientsActivity : AppCompatActivity() {
     }
 
     private fun setupBackPressHandler() {
-        // Обработка кнопки "Назад" через OnBackPressedDispatcher
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // Ваша логика при нажатии "Назад"
                 navigateBackToMain()
             }
         })
@@ -267,8 +395,10 @@ class ClientsActivity : AppCompatActivity() {
         return true
     }
 
-    inner class ClientsAdapter(private val onItemClick: (Client) -> Unit) :
-        RecyclerView.Adapter<ClientsAdapter.ViewHolder>() {
+    inner class ClientsAdapter(
+        private val onItemClick: (Client) -> Unit,
+        private val onEditClick: (Client) -> Unit
+    ) : RecyclerView.Adapter<ClientsAdapter.ViewHolder>() {
 
         private var clients = emptyList<Client>()
 
@@ -279,6 +409,7 @@ class ClientsActivity : AppCompatActivity() {
             val tvAddress: TextView = itemView.findViewById(R.id.tvClientAddress)
             val tvProgram: TextView = itemView.findViewById(R.id.tvLoyaltyProgram)
             val tvRegistrationDate: TextView = itemView.findViewById(R.id.tvRegistrationDate)
+            val btnEdit: ImageButton = itemView.findViewById(R.id.btnEdit)
             val btnDelete: ImageButton = itemView.findViewById(R.id.btnDelete)
         }
 
@@ -315,6 +446,10 @@ class ClientsActivity : AppCompatActivity() {
 
             holder.itemView.setOnClickListener {
                 onItemClick(client)
+            }
+
+            holder.btnEdit.setOnClickListener {
+                onEditClick(client)
             }
 
             holder.btnDelete.setOnClickListener {

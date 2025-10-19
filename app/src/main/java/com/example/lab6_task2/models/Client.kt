@@ -1,6 +1,8 @@
 package com.example.lab6_task2.models
 
+import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
+import java.util.Date
 
 @Serializable
 class Client {
@@ -11,26 +13,27 @@ class Client {
     var phone_number: String
     var adress: String
     var email: String
+    @Contextual
     var date_registration: String
     var loyaltyProgram: LoyaltyProgram
 
     constructor(
-        lastName: String,
-        firstName: String,
+        last_name: String,
+        first_name: String,
         patronymic: String,
-        phoneNumber: String,
+        phone_number: String,
         address: String,
         email: String,
-        dateRegistration: String,
-        loyaltyProgram: LoyaltyProgram
+        date_registration: String,
+        loyalty_program: LoyaltyProgram
     ) {
-        this.last_name = lastName
-        this.first_name = firstName
+        this.last_name = last_name
+        this.first_name = first_name
         this.patronymic = patronymic
-        this.phone_number = phoneNumber
+        this.phone_number = phone_number
         this.adress = address
         this.email = email
-        this.date_registration = dateRegistration
-        this.loyaltyProgram = loyaltyProgram
+        this.date_registration = date_registration
+        this.loyaltyProgram = loyalty_program
     }
 }

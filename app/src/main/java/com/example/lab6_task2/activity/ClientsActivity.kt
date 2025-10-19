@@ -17,10 +17,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.lab6_task2.ClientProvider
+import com.example.lab6_task2.network.ClientProvider
 import com.example.lab6_task2.R
 import com.example.lab6_task2.models.Client
 import com.example.lab6_task2.models.LoyaltyProgram
+import com.example.lab6_task2.network.Result
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.CoroutineScope
@@ -53,6 +54,7 @@ class ClientsActivity : AppCompatActivity() {
         initViews()
         setupRecyclerView()
         setupClickListeners()
+        setupBackPressHandler()
 
         loadLoyaltyPrograms()
         loadClients()
@@ -93,15 +95,34 @@ class ClientsActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadLoyaltyPrograms() {
-        CoroutineScope(Dispatchers.Main).launch {
-            try {
-                loyaltyPrograms = withContext(Dispatchers.IO) {
-                    clientProvider.getAllLoyaltyPrograms()
-                }
-            } catch (e: Exception) {
-                // Ignore error for now, programs will be loaded when needed
+    private fun setupBackPressHandler() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                navigateBackToMain()
             }
+        })
+    }
+
+    private fun loadLoyaltyPrograms() {
+        showLoading(true)
+
+        CoroutineScope(Dispatchers.Main).launch {
+            when (val result = withContext(Dispatchers.IO) {
+                clientProvider.getAllLoyaltyPrograms()
+            }) {
+                is Result.Success -> {
+                    loyaltyPrograms = result.data
+                }
+                is Result.Error -> {
+                    // Можно показать тост или просто продолжить с пустым списком
+                    Toast.makeText(
+                        this@ClientsActivity,
+                        "Warning: Could not load loyalty programs",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+            showLoading(false)
         }
     }
 
@@ -109,21 +130,27 @@ class ClientsActivity : AppCompatActivity() {
         showLoading(true)
 
         CoroutineScope(Dispatchers.Main).launch {
-            try {
-                val clients = withContext(Dispatchers.IO) {
-                    clientProvider.getAllClients()
+            when (val result = withContext(Dispatchers.IO) {
+                clientProvider.getAllClients()
+            }) {
+                is Result.Success -> {
+                    val clients = result.data
+                    clientsList.clear()
+                    clientsList.addAll(clients)
+                    adapter.submitList(clientsList.toList())
+
+                    emptyState.visibility = if (clients.isEmpty()) View.VISIBLE else View.GONE
                 }
-
-                clientsList.clear()
-                clientsList.addAll(clients)
-                adapter.submitList(clientsList.toList())
-
-                emptyState.visibility = if (clients.isEmpty()) View.VISIBLE else View.GONE
-            } catch (e: Exception) {
-                Toast.makeText(this@ClientsActivity, "Error loading clients: ${e.message}", Toast.LENGTH_LONG).show()
-            } finally {
-                showLoading(false)
+                is Result.Error -> {
+                    Toast.makeText(
+                        this@ClientsActivity,
+                        "Error loading clients: ${result.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    emptyState.visibility = View.VISIBLE
+                }
             }
+            showLoading(false)
         }
     }
 
@@ -225,7 +252,7 @@ class ClientsActivity : AppCompatActivity() {
             it.id_loyalty_program == client.loyaltyProgram.id_loyalty_program
         }
         if (currentProgramIndex >= 0) {
-            spinnerPrograms.setSelection(currentProgramIndex + 1) // +1 потому что первый элемент "Select Program"
+            spinnerPrograms.setSelection(currentProgramIndex + 1)
         }
 
         val dialog = AlertDialog.Builder(this)
@@ -246,10 +273,8 @@ class ClientsActivity : AppCompatActivity() {
 
                     val selectedProgram = loyaltyPrograms[selectedProgramPosition - 1]
 
-                    // Создаем Map с измененными полями
                     val updates = mutableMapOf<String, Any>()
 
-                    // Добавляем только те поля, которые изменились
                     if (lastName != client.last_name) {
                         updates["last_name"] = lastName
                     }
@@ -274,7 +299,6 @@ class ClientsActivity : AppCompatActivity() {
                         )
                     }
 
-                    // Если есть изменения - отправляем PATCH
                     if (updates.isNotEmpty()) {
                         patchClient(client.id_client!!, updates)
                     } else {
@@ -294,18 +318,22 @@ class ClientsActivity : AppCompatActivity() {
         showLoading(true)
 
         CoroutineScope(Dispatchers.Main).launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    clientProvider.createClient(client)
+            when (val result = withContext(Dispatchers.IO) {
+                clientProvider.createClient(client)
+            }) {
+                is Result.Success -> {
+                    loadClients()
+                    Toast.makeText(this@ClientsActivity, "Client created successfully", Toast.LENGTH_SHORT).show()
                 }
-                loadClients() // Refresh the list
-                Toast.makeText(this@ClientsActivity, "Client created successfully", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                println("🔴 Error in createClient: ${e.message}")
-                Toast.makeText(this@ClientsActivity, "Error creating client: ${e.message}", Toast.LENGTH_LONG).show()
-            } finally {
-                showLoading(false)
+                is Result.Error -> {
+                    Toast.makeText(
+                        this@ClientsActivity,
+                        "Error creating client: ${result.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
+            showLoading(false)
         }
     }
 
@@ -313,22 +341,26 @@ class ClientsActivity : AppCompatActivity() {
         showLoading(true)
 
         CoroutineScope(Dispatchers.Main).launch {
-            try {
-                val success = withContext(Dispatchers.IO) {
-                    clientProvider.patchClient(clientId, updates)
+            when (val result = withContext(Dispatchers.IO) {
+                clientProvider.patchClient(clientId, updates)
+            }) {
+                is Result.Success -> {
+                    if (result.data) {
+                        loadClients()
+                        Toast.makeText(this@ClientsActivity, "Client updated successfully", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@ClientsActivity, "Failed to update client", Toast.LENGTH_LONG).show()
+                    }
                 }
-                if (success) {
-                    loadClients() // Refresh the list
-                    Toast.makeText(this@ClientsActivity, "Client updated successfully", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this@ClientsActivity, "Failed to update client", Toast.LENGTH_LONG).show()
+                is Result.Error -> {
+                    Toast.makeText(
+                        this@ClientsActivity,
+                        "Error updating client: ${result.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
-            } catch (e: Exception) {
-                println("🔴 Error in patchClient: ${e.message}")
-                Toast.makeText(this@ClientsActivity, "Error updating client: ${e.message}", Toast.LENGTH_LONG).show()
-            } finally {
-                showLoading(false)
             }
+            showLoading(false)
         }
     }
 
@@ -336,17 +368,26 @@ class ClientsActivity : AppCompatActivity() {
         showLoading(true)
 
         CoroutineScope(Dispatchers.Main).launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    clientProvider.deleteClient(id)
+            when (val result = withContext(Dispatchers.IO) {
+                clientProvider.deleteClient(id)
+            }) {
+                is Result.Success -> {
+                    if (result.data) {
+                        loadClients()
+                        Toast.makeText(this@ClientsActivity, "Client deleted successfully", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@ClientsActivity, "Failed to delete client", Toast.LENGTH_LONG).show()
+                    }
                 }
-                loadClients() // Refresh the list
-                Toast.makeText(this@ClientsActivity, "Client deleted successfully", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Toast.makeText(this@ClientsActivity, "Error deleting client: ${e.message}", Toast.LENGTH_LONG).show()
-            } finally {
-                showLoading(false)
+                is Result.Error -> {
+                    Toast.makeText(
+                        this@ClientsActivity,
+                        "Error deleting client: ${result.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
+            showLoading(false)
         }
     }
 
@@ -373,14 +414,6 @@ class ClientsActivity : AppCompatActivity() {
 
     private fun showLoading(show: Boolean) {
         loadingOverlay.visibility = if (show) View.VISIBLE else View.GONE
-    }
-
-    private fun setupBackPressHandler() {
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                navigateBackToMain()
-            }
-        })
     }
 
     private fun navigateBackToMain() {
@@ -422,26 +455,17 @@ class ClientsActivity : AppCompatActivity() {
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val client = clients[position]
 
-            // ФИО
             holder.tvName.text = "${client.last_name} ${client.first_name} ${client.patronymic}"
-
-            // Телефон
             holder.tvPhone.text = client.phone_number
-
-            // Email
             holder.tvEmail.text = client.email
-
-            // Адрес
             holder.tvAddress.text = client.adress
 
-            // Программа лояльности
             val program = loyaltyPrograms.find { it.id_loyalty_program == client.loyaltyProgram.id_loyalty_program }
             val programText = program?.let {
                 "Level ${it.loyalty_level} - ${it.discount_amount}%"
             } ?: "Unknown Program"
             holder.tvProgram.text = programText
 
-            // Дата регистрации
             holder.tvRegistrationDate.text = client.date_registration
 
             holder.itemView.setOnClickListener {
@@ -457,7 +481,15 @@ class ClientsActivity : AppCompatActivity() {
                     .setTitle("Delete Client")
                     .setMessage("Are you sure you want to delete ${client.last_name} ${client.first_name}?")
                     .setPositiveButton("Delete") { _, _ ->
-                        deleteClient(client.id_client!!)
+                        if (client.id_client != null) {
+                            deleteClient(client.id_client!!)
+                        } else {
+                            Toast.makeText(
+                                this@ClientsActivity,
+                                "Error: Client ID is null",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
                     }
                     .setNegativeButton("Cancel", null)
                     .show()

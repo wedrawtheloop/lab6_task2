@@ -13,9 +13,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.lab6_task2.ClientProvider
+import com.example.lab6_task2.network.ClientProvider
 import com.example.lab6_task2.R
 import com.example.lab6_task2.models.LoyaltyProgram
+import com.example.lab6_task2.network.Result
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.CoroutineScope
@@ -83,18 +84,24 @@ class LoyaltyProgramsActivity : AppCompatActivity() {
         showLoading(true)
 
         CoroutineScope(Dispatchers.Main).launch {
-            try {
-                val programs = withContext(Dispatchers.IO) {
-                    clientProvider.getAllLoyaltyPrograms()
+            when (val result = withContext(Dispatchers.IO) {
+                clientProvider.getAllLoyaltyPrograms()
+            }) {
+                is Result.Success -> {
+                    val programs = result.data
+                    adapter.submitList(programs)
+                    emptyState.visibility = if (programs.isEmpty()) View.VISIBLE else View.GONE
                 }
-
-                adapter.submitList(programs)
-                emptyState.visibility = if (programs.isEmpty()) View.VISIBLE else View.GONE
-            } catch (e: Exception) {
-                Toast.makeText(this@LoyaltyProgramsActivity, "Error loading programs: ${e.message}", Toast.LENGTH_LONG).show()
-            } finally {
-                showLoading(false)
+                is Result.Error -> {
+                    Toast.makeText(
+                        this@LoyaltyProgramsActivity,
+                        "Error loading programs: ${result.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    emptyState.visibility = View.VISIBLE
+                }
             }
+            showLoading(false)
         }
     }
 
@@ -150,6 +157,10 @@ class LoyaltyProgramsActivity : AppCompatActivity() {
     }
 
     private fun showEditProgramDialog(program: LoyaltyProgram) {
+        if (program.id_loyalty_program == null) {
+            Toast.makeText(this, "Error: Program ID is null", Toast.LENGTH_LONG).show()
+            return
+        }
 
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_loyalty_program, null)
 
@@ -183,17 +194,17 @@ class LoyaltyProgramsActivity : AppCompatActivity() {
 
                         if (level > 0 && discount in 1..100 && validity > 0) {
                             // Создаем Map с измененными полями с правильными типами
-                            val updates = mutableMapOf<String, Any>() // Изменили на Any
+                            val updates = mutableMapOf<String, Any>()
 
                             // Добавляем только те поля, которые изменились
                             if (level != program.loyalty_level) {
-                                updates["loyalty_level"] = level // Отправляем Int, а не String
+                                updates["loyalty_level"] = level
                             }
                             if (discount != program.discount_amount) {
-                                updates["discount_amount"] = discount // Отправляем Int, а не String
+                                updates["discount_amount"] = discount
                             }
                             if (validity != program.validity_period) {
-                                updates["validity_period"] = validity // Отправляем Int, а не String
+                                updates["validity_period"] = validity
                             }
                             if (description != program.description) {
                                 updates["description"] = description
@@ -225,18 +236,22 @@ class LoyaltyProgramsActivity : AppCompatActivity() {
         showLoading(true)
 
         CoroutineScope(Dispatchers.Main).launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    clientProvider.createLoyaltyProgram(program)
+            when (val result = withContext(Dispatchers.IO) {
+                clientProvider.createLoyaltyProgram(program)
+            }) {
+                is Result.Success -> {
+                    loadLoyaltyPrograms()
+                    Toast.makeText(this@LoyaltyProgramsActivity, "Loyalty program created successfully", Toast.LENGTH_SHORT).show()
                 }
-                loadLoyaltyPrograms() // Refresh the list
-                Toast.makeText(this@LoyaltyProgramsActivity, "Loyalty program created successfully", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                println("🔴 Error in createLoyaltyProgram: ${e.message}")
-                Toast.makeText(this@LoyaltyProgramsActivity, "Error creating loyalty program: ${e.message}", Toast.LENGTH_LONG).show()
-            } finally {
-                showLoading(false)
+                is Result.Error -> {
+                    Toast.makeText(
+                        this@LoyaltyProgramsActivity,
+                        "Error creating loyalty program: ${result.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
+            showLoading(false)
         }
     }
 
@@ -244,22 +259,26 @@ class LoyaltyProgramsActivity : AppCompatActivity() {
         showLoading(true)
 
         CoroutineScope(Dispatchers.Main).launch {
-            try {
-                val success = withContext(Dispatchers.IO) {
-                    clientProvider.patchLoyaltyProgram(programId, updates)
+            when (val result = withContext(Dispatchers.IO) {
+                clientProvider.patchLoyaltyProgram(programId, updates)
+            }) {
+                is Result.Success -> {
+                    if (result.data) {
+                        loadLoyaltyPrograms()
+                        Toast.makeText(this@LoyaltyProgramsActivity, "Loyalty program updated successfully", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@LoyaltyProgramsActivity, "Failed to update loyalty program", Toast.LENGTH_LONG).show()
+                    }
                 }
-                if (success) {
-                    loadLoyaltyPrograms() // Refresh the list
-                    Toast.makeText(this@LoyaltyProgramsActivity, "Loyalty program updated successfully", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this@LoyaltyProgramsActivity, "Failed to update loyalty program", Toast.LENGTH_LONG).show()
+                is Result.Error -> {
+                    Toast.makeText(
+                        this@LoyaltyProgramsActivity,
+                        "Error updating loyalty program: ${result.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
-            } catch (e: Exception) {
-                println("🔴 Error in patchLoyaltyProgram: ${e.message}")
-                Toast.makeText(this@LoyaltyProgramsActivity, "Error updating loyalty program: ${e.message}", Toast.LENGTH_LONG).show()
-            } finally {
-                showLoading(false)
             }
+            showLoading(false)
         }
     }
 
@@ -267,17 +286,26 @@ class LoyaltyProgramsActivity : AppCompatActivity() {
         showLoading(true)
 
         CoroutineScope(Dispatchers.Main).launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    clientProvider.deleteLoyaltyProgram(id)
+            when (val result = withContext(Dispatchers.IO) {
+                clientProvider.deleteLoyaltyProgram(id)
+            }) {
+                is Result.Success -> {
+                    if (result.data) {
+                        loadLoyaltyPrograms()
+                        Toast.makeText(this@LoyaltyProgramsActivity, "Loyalty program deleted successfully", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@LoyaltyProgramsActivity, "Failed to delete loyalty program", Toast.LENGTH_LONG).show()
+                    }
                 }
-                loadLoyaltyPrograms() // Refresh the list
-                Toast.makeText(this@LoyaltyProgramsActivity, "Loyalty program deleted successfully", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Toast.makeText(this@LoyaltyProgramsActivity, "Error deleting loyalty program: ${e.message}", Toast.LENGTH_LONG).show()
-            } finally {
-                showLoading(false)
+                is Result.Error -> {
+                    Toast.makeText(
+                        this@LoyaltyProgramsActivity,
+                        "Error deleting loyalty program: ${result.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
+            showLoading(false)
         }
     }
 
@@ -348,7 +376,15 @@ class LoyaltyProgramsActivity : AppCompatActivity() {
                     .setTitle("Delete Loyalty Program")
                     .setMessage("Are you sure you want to delete Level ${program.loyalty_level} program?")
                     .setPositiveButton("Delete") { _, _ ->
-                        deleteLoyaltyProgram(program.id_loyalty_program!!)
+                        if (program.id_loyalty_program != null) {
+                            deleteLoyaltyProgram(program.id_loyalty_program!!)
+                        } else {
+                            Toast.makeText(
+                                this@LoyaltyProgramsActivity,
+                                "Error: Program ID is null",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
                     }
                     .setNegativeButton("Cancel", null)
                     .show()

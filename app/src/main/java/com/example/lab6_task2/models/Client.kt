@@ -1,36 +1,39 @@
 package com.example.lab6_task2.models
 
+import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
+import java.util.Date
 
 @Serializable
 class Client {
-    var id: Long? = null
-    var lastName: String
-    var firstName: String
+    var id_client: Long? = null
+    var last_name: String
+    var first_name: String
     var patronymic: String
-    var phoneNumber: String
-    var address: String
+    var phone_number: String
+    var adress: String
     var email: String
-    var dateRegistration: String
+    @Contextual
+    var date_registration: String
     var loyaltyProgram: LoyaltyProgram
 
     constructor(
-        lastName: String,
-        firstName: String,
+        last_name: String,
+        first_name: String,
         patronymic: String,
-        phoneNumber: String,
+        phone_number: String,
         address: String,
         email: String,
-        dateRegistration: String,
-        loyaltyProgram: LoyaltyProgram
+        date_registration: String,
+        loyalty_program: LoyaltyProgram
     ) {
-        this.lastName = lastName
-        this.firstName = firstName
+        this.last_name = last_name
+        this.first_name = first_name
         this.patronymic = patronymic
-        this.phoneNumber = phoneNumber
-        this.address = address
+        this.phone_number = phone_number
+        this.adress = address
         this.email = email
-        this.dateRegistration = dateRegistration
-        this.loyaltyProgram = loyaltyProgram
+        this.date_registration = date_registration
+        this.loyaltyProgram = loyalty_program
     }
 }

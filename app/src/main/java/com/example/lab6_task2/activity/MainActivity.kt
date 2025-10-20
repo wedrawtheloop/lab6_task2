@@ -9,10 +9,9 @@ import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
-import com.example.lab6_task2.ClientProvider
+import com.example.lab6_task2.network.ClientProvider
 import com.example.lab6_task2.R
-import com.example.lab6_task2.models.Client
-import com.example.lab6_task2.models.LoyaltyProgram
+import com.example.lab6_task2.network.Result
 import com.google.android.material.appbar.MaterialToolbar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,11 +29,16 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         clientProvider = ClientProvider()
-
         setupToolbar()
         setupClickListeners()
         loadData()
     }
+
+    override fun onResume() {
+        super.onResume()
+        loadData()
+    }
+
     private fun setupToolbar() {
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
@@ -54,24 +58,25 @@ class MainActivity : AppCompatActivity() {
     private fun loadData() {
         showLoading(true)
 
-        // Загружаем данные в фоновом потоке
         CoroutineScope(Dispatchers.Main).launch {
             try {
                 val clientsDeferred = async(Dispatchers.IO) {
-                    try {
-                        clientProvider.getAllClients()
-                    } catch (e: Exception){
-                        println("Error loading clients: ${e.message}")
-                        emptyList<Client>()
+                    when (val result = clientProvider.getAllClients()) {
+                        is Result.Success -> result.data
+                        is Result.Error -> {
+                            println("Error loading clients: ${result.message}")
+                            emptyList()
+                        }
                     }
-
                 }
+
                 val programsDeferred = async(Dispatchers.IO) {
-                    try {
-                        clientProvider.getAllLoyaltyPrograms()
-                    } catch (e: Exception){
-                        println("Error loading programs: ${e.message}")
-                        emptyList<LoyaltyProgram>()
+                    when (val result = clientProvider.getAllLoyaltyPrograms()) {
+                        is Result.Success -> result.data
+                        is Result.Error -> {
+                            println("Error loading programs: ${result.message}")
+                            emptyList()
+                        }
                     }
                 }
 
@@ -82,8 +87,38 @@ class MainActivity : AppCompatActivity() {
                 programsCount = programs.size
 
                 updateUI()
+
+                if (clients.isEmpty() && programs.isEmpty()) {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Unable to load data. Please check your connection.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else if (clients.isEmpty()) {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Unable to load clients",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else if (programs.isEmpty()) {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Unable to load loyalty programs",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+
             } catch (e: Exception) {
-                Toast.makeText(this@MainActivity, "Error loading data: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    this@MainActivity,
+                    "Error loading data: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+                clientsCount = 0
+                programsCount = 0
+                updateUI()
+            } finally {
+                showLoading(false)
             }
         }
     }

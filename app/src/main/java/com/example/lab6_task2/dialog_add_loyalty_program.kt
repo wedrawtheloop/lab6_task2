@@ -4,10 +4,11 @@ import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 
-class ItemLoyaltyProgramActivity : AppCompatActivity() {
+class dialog_add_loyalty_program : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContentView(R.layout.item_loyalty_program)
+        setContentView(R.layout.dialog_add_loyalty_program)
+
     }
 }
